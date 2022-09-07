@@ -4,6 +4,7 @@ import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import io.netty.incubator.codec.quic.QuicSslContext;
 import io.netty.incubator.codec.quic.QuicSslContextBuilder;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.http.server.reactive.HttpHandler;
@@ -25,18 +26,19 @@ import java.time.Duration;
  */
 @Slf4j
 @Component
-public class TestRunner implements CommandLineRunner {
+public class Http3Runner implements CommandLineRunner , DisposableBean {
 
 
     @Autowired
     @SuppressWarnings("all")
     private HttpHandler httpHandler;
 
+    private DisposableServer connection;
 
     @Override
     public void run(String... args) throws Exception {
         KeyStore keyStore = KeyStore.getInstance("PKCS12");
-        keyStore.load(TestRunner.class.getClassLoader().getResourceAsStream("http3.nyist.xyz.pfx"), "123456".toCharArray());
+        keyStore.load(Http3Runner.class.getClassLoader().getResourceAsStream("http3.nyist.xyz.pfx"), "123456".toCharArray());
         KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         keyManagerFactory.init(keyStore, "123456".toCharArray());
 
@@ -45,7 +47,8 @@ public class TestRunner implements CommandLineRunner {
                 .applicationProtocols(Http3.supportedApplicationProtocols()).build();
 
 
-        DisposableServer connection = Http3Server.create()
+        this.connection = Http3Server.create()
+                //chrome 默认未开启 QpackDynamicTable
                 .disableQpackDynamicTable(true)
                 .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
                 .handleStream(new ReactorHttp3HandlerAdapter(httpHandler))
@@ -62,11 +65,12 @@ public class TestRunner implements CommandLineRunner {
                                                  .maxStreamsUnidirectional(3)
                 ).bindNow();
 
-        new Thread(() -> {
-            connection.onDispose().block();
-        }).start();
+    }
 
 
+    @Override
+    public void destroy() {
+        connection.dispose();
     }
 
 }

@@ -50,6 +50,11 @@
             <groupId>io.netty.incubator</groupId>
             <artifactId>netty-incubator-codec-native-quic</artifactId>
             <version>0.0.28.Final</version>
+            <!--使用与自己os匹配的classifier
+                linux-x86_64
+                osx-x86_64
+                windows-x86_64
+            -->
             <classifier>osx-x86_64</classifier>
             <scope>runtime</scope>
         </dependency>
